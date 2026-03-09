@@ -81,3 +81,38 @@ tr:hover {
     color: #ff3333;
     font-weight: bold;
 }
+
+.stats-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    margin: 30px 0;
+}
+
+.stat-card {
+    flex: 1;
+    padding: 20px;
+    border-radius: 12px;
+    background: linear-gradient(145deg, #111827, #0f172a);
+    text-align: center;
+    box-shadow: 0 0 15px rgba(0,255,255,0.05);
+}
+
+.stat-number {
+    font-size: 28px;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.stat-label {
+    font-size: 14px;
+    opacity: 0.8;
+}
+
+.malicious { border-left: 4px solid #ff4d4d; }
+.clean { border-left: 4px solid #00d084; }
+.error { border-left: 4px solid #ffb300; }
+
+.graph-section {
+    margin: 40px 0;
+}

@@ -1,45 +1,450 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-    <title>Cyber Threat Intelligence</title>
+    <title>GN // IP_INVESTIGATE</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts-gl/dist/echarts-gl.min.js"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;800&display=swap"
+        rel="stylesheet">
 </head>
+
 <body>
+    <div class="bg-grid"></div>
 
-<div class="container">
+    <div class="main-wrapper">
+        <div class="header">
+            <h1>Automated IP_INVESTIGATE</h1>
+            <p>LIVE THREAT MONITORING & RISK ANALYSIS PROTOCOL</p>
+        </div>
 
-    <h1>Cyber Threat Intelligence Tool</h1>
+        <!-- BUTTONS -->
+        <div class="top-controls">
+            <div class="left-control">
+                <input type="file" id="fileInput" hidden>
+                <button class="btn btn-primary" id="scanBtn">
+                    <span class="icon">◩</span> IMPORT & SCAN
+                </button>
+            </div>
+            <div class="center-control">
+                <button class="btn btn-danger" id="stopBtn">
+                    <span class="icon">✖</span> TERMINATE
+                </button>
+            </div>
+            <div class="right-control">
+                <button class="btn btn-secondary" id="exportBtn">
+                    <span class="icon">⇲</span> EXPORT MALICIOUS
+                </button>
+            </div>
+        </div>
 
-    <div class="top-bar">
-        <form method="POST" enctype="multipart/form-data">
-            <input type="file" name="file" required>
-            <button type="submit">Import & Scan</button>
-        </form>
+        <!-- PROGRESS & TERMINAL -->
+        <div class="progress-container" id="progressContainer" style="display:none;">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
 
-        <a href="/export_malicious">
-            <button>Export Malicious</button>
-        </a>
+        <div class="terminal-flex">
+            <div class="progress-text" id="progressText"></div>
+            <!-- Animated Terminal Log feed -->
+            <div class="terminal-log" id="terminalLog"></div>
+        </div>
+
+        <!-- LAYOUT GRID -->
+        <div class="dashboard-grid">
+            <!-- 3D CHART (LEFT) -->
+            <div class="chart-panel">
+                <div class="panel-header">THREAT_TOPOLOGY_3D // BUBBLE_MATRIX</div>
+                <div class="chart-container">
+                    <div id="ipChart" style="width: 100%; height: 100%;"></div>
+                </div>
+            </div>
+
+            <!-- STATS (RIGHT) -->
+            <div class="stats-panel">
+                <div class="stat-card">
+                    <div class="stat-label">TOTAL_IPS</div>
+                    <div class="stat-number" id="totalCount">0</div>
+                </div>
+                <div class="stat-card malicious">
+                    <div class="stat-label">MALICIOUS</div>
+                    <div class="stat-number text-danger" id="maliciousCount">0</div>
+                </div>
+                <div class="stat-card clean">
+                    <div class="stat-label">CLEAN</div>
+                    <div class="stat-number text-safe" id="cleanCount">0</div>
+                </div>
+                <div class="stat-card error">
+                    <div class="stat-label">ERRORS/QUOTA</div>
+                    <div class="stat-number text-warning" id="errorCount">0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FILTER -->
+        <div class="filter-row">
+            <input type="text" id="searchInput" placeholder="> SEARCH IP...">
+            <select id="riskFilter">
+                <option value="all">ALL STATUS</option>
+                <option value="malicious">MALICIOUS</option>
+                <option value="clean">CLEAN</option>
+                <option value="error">ERROR</option>
+            </select>
+        </div>
+
+        <!-- TABLE -->
+        <div class="table-wrapper box-panel">
+            <table>
+                <thead>
+                    <tr>
+                        <th>S.NO</th>
+                        <th>IP_ADDRESS</th>
+                        <th>ABUSE_IP_%</th>
+                        <th>VT_ENGINE_%</th>
+                        <th>STATUS</th>
+                    </tr>
+                </thead>
+                <tbody id="resultsBody">
+                    <tr>
+                        <td colspan="5" class="empty-state">
+                            <div class="empty-icon">▤</div>
+                            <div>AWAITING DATA INPUT...</div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 
-    <table>
-        <tr>
-            <th>S.No</th>
-            <th>IP</th>
-            <th>AbuseIP %</th>
-            <th>VT Engine %</th>
-        </tr>
+    <script>
+        const fileInput = document.getElementById("fileInput");
+        const scanBtn = document.getElementById("scanBtn");
+        const stopBtn = document.getElementById("stopBtn");
+        const exportBtn = document.getElementById("exportBtn");
+        const tableBody = document.getElementById("resultsBody");
+        const terminalLog = document.getElementById("terminalLog");
 
-        {% for row in results %}
-        <tr>
-            <td>{{ row["S.No"] }}</td>
-            <td>{{ row["IP"] }}</td>
-            <td>{{ row["AbuseIP %"] }}</td>
-            <td>{{ row["VT Engine %"] }}</td>
-        </tr>
-        {% endfor %}
-    </table>
+        let currentResults = [];
+        let ipChart;
+        let knownIPs = new Set(); // To track lines for terminal feed
 
-</div>
+        /* ================ Init 3D Chart ================ */
+        function initChart() {
+            const chartDom = document.getElementById("ipChart");
+            ipChart = echarts.init(chartDom);
 
+            // Ref 1st Image: Multi-color neon bubbles of varying sizes
+            const option = {
+                backgroundColor: 'transparent',
+                tooltip: {
+                    backgroundColor: 'rgba(9, 9, 11, 0.9)',
+                    borderColor: '#333',
+                    textStyle: { color: '#fff', fontFamily: 'JetBrains Mono', fontSize: 11 },
+                    formatter: function (params) {
+                        return `Index: ${params.value[0]}<br/>AbuseIP: ${params.value[1]}%<br/>VT: ${params.value[2]}%`;
+                    }
+                },
+                visualMap: {
+                    show: false,
+                    dimension: 3, // mapped to maxRisk
+                    min: 0,
+                    max: 100,
+                    inRange: {
+                        // Purples/Greens/Oranges matching the 1st reference image
+                        color: ['#00ffae', '#1e90ff', '#8a2be2', '#ff8c00', '#ff2a2a']
+                    }
+                },
+                xAxis3D: {
+                    type: 'value',
+                    name: 'X',
+                    min: 0,
+                    nameTextStyle: { color: 'rgba(255,255,255,0)' },
+                    axisLine: { lineStyle: { color: '#333' } },
+                    axisLabel: { textStyle: { color: '#444', fontFamily: 'JetBrains Mono', fontSize: 9 } },
+                    splitLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } }
+                },
+                yAxis3D: {
+                    type: 'value',
+                    name: 'Y',
+                    min: 0, max: 100,
+                    nameTextStyle: { color: 'rgba(255,255,255,0)' },
+                    axisLine: { lineStyle: { color: '#333' } },
+                    axisLabel: { textStyle: { color: '#444', fontFamily: 'JetBrains Mono', fontSize: 9 } },
+                    splitLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } }
+                },
+                zAxis3D: {
+                    type: 'value',
+                    name: 'Z',
+                    min: 0, max: 100,
+                    nameTextStyle: { color: 'rgba(255,255,255,0)' },
+                    axisLine: { lineStyle: { color: '#333' } },
+                    axisLabel: { textStyle: { color: '#444', fontFamily: 'JetBrains Mono', fontSize: 9 } },
+                    splitLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } }
+                },
+                grid3D: {
+                    viewControl: {
+                        autoRotate: true,
+                        autoRotateSpeed: 3,
+                        distance: 220,
+                        alpha: 25,
+                        beta: 45
+                    },
+                    environment: 'transparent',
+                    axisLine: { lineStyle: { color: '#333' } },
+                    axisPointer: { lineStyle: { color: '#00d4ff', type: 'dashed' } },
+                    light: {
+                        main: { intensity: 1.8, shadow: true },
+                        ambient: { intensity: 0.6 }
+                    }
+                },
+                series: [{
+                    type: 'scatter3D',
+                    // Dynamically size bubble based on risk score mapped in dimension 3
+                    symbolSize: function (val) {
+                        return Math.max(12, val[3] * 0.35); // Big bubbles for high risk
+                    },
+                    itemStyle: {
+                        opacity: 0.85,
+                        borderWidth: 0
+                    },
+                    blendMode: 'lighter',
+                    data: []
+                }]
+            };
+            ipChart.setOption(option);
+
+            window.addEventListener('resize', () => {
+                ipChart.resize();
+            });
+        }
+
+        /* ================ Update Chart ================ */
+        function updateChart(results) {
+            let dataPoints = [];
+
+            // X-axis spread trick to make it look like a cluster (Index % 100)
+            results.forEach((r, idx) => {
+                let vt = r["VT Engine %"];
+                let abuse = r["AbuseIP %"];
+
+                let vtVal = (vt === "ERROR" || vt === "QUOTA" || vt === "RATE_LIMITED") ? 0 : parseFloat(vt) || 0;
+                let abuseVal = (abuse === "ERROR" || abuse === "QUOTA" || abuse === "RATE_LIMITED") ? 0 : parseFloat(abuse) || 0;
+
+                let maxRisk = Math.max(vtVal, abuseVal);
+
+                // [X(spread), Y(abuse), Z(vt), Color/Size(maxRisk)]
+                dataPoints.push([(idx * 13) % 150, abuseVal, vtVal, maxRisk]);
+            });
+
+            if (ipChart) {
+                ipChart.setOption({ series: [{ data: dataPoints }] });
+            }
+        }
+
+        /* ================ Terminal Feed Animation ================ */
+        function appendTerminalLog(ip, status) {
+            const line = document.createElement('div');
+            line.className = 'term-line type-anim';
+
+            if (status === 'clean') {
+                line.innerHTML = `<span style="color:#00ffae;">[ OK ]</span> ${ip} - ZERO_THREAT`;
+            } else if (status === 'malicious') {
+                line.innerHTML = `<span style="color:#ff2a2a;">[ THREAT ]</span> ${ip} - MALICIOUS_ACTIVITY_DETECTED`;
+            } else {
+                line.innerHTML = `<span style="color:#ffb300;">[ ERR ]</span> ${ip} - UNKNOWN_OR_QUOTA`;
+            }
+
+            terminalLog.appendChild(line);
+
+            // Scrolldown
+            terminalLog.scrollTop = terminalLog.scrollHeight;
+
+            // Limit log lines to 5
+            if (terminalLog.children.length > 5) {
+                terminalLog.removeChild(terminalLog.firstChild);
+            }
+        }
+
+        function processTerminalQueue(results) {
+            results.forEach(r => {
+                if (!knownIPs.has(r.IP)) {
+                    knownIPs.add(r.IP);
+                    appendTerminalLog(r.IP, classifyIP(r));
+                }
+            });
+        }
+
+        /* ================ Import ================ */
+        scanBtn.addEventListener("click", () => fileInput.click());
+
+        fileInput.addEventListener("change", function () {
+            if (!fileInput.files.length) return;
+
+            const formData = new FormData();
+            formData.append("file", fileInput.files[0]);
+
+            terminalLog.innerHTML = ""; // clear feed
+            knownIPs.clear();
+
+            fetch("/start_scan", {
+                method: "POST",
+                body: formData
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === "started") {
+                        document.getElementById("progressContainer").style.display = "block";
+                        document.getElementById("progressText").innerText = `> EXECUTING SCAN LOGIC OVER ${data.total_ips} VECTORS...`;
+                    } else if (data.status === "already_running") {
+                        alert("PROTOCOL ALREADY ACTIVE.");
+                    } else if (data.status === "no_ips_found") {
+                        alert("NO VALID PUBLIC IPS FOUND IN UPLOAD.");
+                    }
+                });
+
+            pollProgress();
+            fileInput.value = "";
+        });
+
+        /* ================ Polling ================ */
+        function pollProgress() {
+            const interval = setInterval(() => {
+                fetch("/progress")
+                    .then(res => res.json())
+                    .then(data => {
+                        currentResults = removeDuplicates(data.results || []);
+                        renderTable(currentResults);
+                        updateStats(currentResults);
+                        updateChart(currentResults);
+                        processTerminalQueue(currentResults);
+
+                        if (data.total > 0) {
+                            const pct = Math.round((data.completed / data.total) * 100);
+                            document.getElementById("progressBar").style.width = pct + "%";
+                            document.getElementById("progressText").innerText =
+                                `> ASSESSING TARGETS: ${data.completed}/${data.total} [${pct}%]`;
+                        }
+
+                        if (!data.running) {
+                            clearInterval(interval);
+                            document.getElementById("progressText").innerText = "> SCAN SEQUENCE COMPLETE //";
+                            setTimeout(() => {
+                                document.getElementById("progressContainer").style.display = "none";
+                                document.getElementById("progressText").innerText = "";
+                                terminalLog.innerHTML = "";
+                            }, 4000);
+                        }
+                    });
+            }, 1000);
+        }
+
+        /* ================ Utils ================ */
+        function removeDuplicates(results) {
+            const map = new Map();
+            results.forEach(r => map.set(r["IP"], r));
+            return Array.from(map.values());
+        }
+
+        function classifyIP(r) {
+            const vt = r["VT Engine %"];
+            const abuse = r["AbuseIP %"];
+            const vtErr = (vt === "ERROR" || vt === "QUOTA" || vt === "RATE_LIMITED");
+            const abuseErr = (abuse === "ERROR" || abuse === "QUOTA" || abuse === "RATE_LIMITED");
+
+            if (vtErr && abuseErr) return "error";
+            if (!vtErr && parseFloat(vt) > 50) return "malicious";
+            if (!abuseErr && parseFloat(abuse) >= 75) return "malicious";
+            if (vtErr || abuseErr) return "error";
+            return "clean";
+        }
+
+        /* ================ Stats ================ */
+        function updateStats(results) {
+            let malicious = 0, clean = 0, error = 0;
+            results.forEach(r => {
+                const cls = classifyIP(r);
+                if (cls === "malicious") malicious++;
+                else if (cls === "error") error++;
+                else clean++;
+            });
+
+            document.getElementById("totalCount").innerText = results.length;
+            document.getElementById("maliciousCount").innerText = malicious;
+            document.getElementById("cleanCount").innerText = clean;
+            document.getElementById("errorCount").innerText = error;
+        }
+
+        /* ================ Render Table ================ */
+        function renderTable(results) {
+            const searchVal = document.getElementById("searchInput").value.toLowerCase().trim();
+            const filterVal = document.getElementById("riskFilter").value;
+
+            let filtered = results.filter(r => {
+                if (searchVal && !r["IP"].toLowerCase().includes(searchVal)) return false;
+                if (filterVal !== "all" && classifyIP(r) !== filterVal) return false;
+                return true;
+            });
+
+            filtered.sort((a, b) => a["S.No"] - b["S.No"]);
+
+            if (filtered.length === 0) {
+                tableBody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="empty-state">
+                        <div class="empty-icon">!</div>
+                        <div>NO MATCHING RECORDS.</div>
+                    </td>
+                </tr>`;
+                return;
+            }
+
+            let html = "";
+            filtered.forEach((r) => {
+                const cls = classifyIP(r);
+                const vt = r["VT Engine %"];
+                const abuse = r["AbuseIP %"];
+
+                let statusBadge = '';
+                if (cls === "malicious") {
+                    statusBadge = '<span class="badge badge-danger">MALICIOUS</span>';
+                } else if (cls === "error") {
+                    statusBadge = '<span class="badge badge-warning">ERROR/LMT</span>';
+                } else {
+                    statusBadge = '<span class="badge badge-safe">CLEAN</span>';
+                }
+
+                html += `<tr class="row-${cls}">
+                    <td>${r["S.No"]}</td>
+                    <td class="ip-cell">${r["IP"]}</td>
+                    <td>${abuse}</td>
+                    <td>${vt}</td>
+                    <td>${statusBadge}</td>
+                </tr>`;
+            });
+
+            tableBody.innerHTML = html;
+        }
+
+        /* ================ Events ================ */
+        stopBtn.addEventListener("click", () => {
+            fetch("/stop_scan", { method: "POST" })
+                .then(() => {
+                    document.getElementById("progressText").innerText = "> USER OVERRIDE: SCAN TERMINATED.";
+                });
+        });
+
+        exportBtn.addEventListener("click", () => {
+            window.location.href = "/export_malicious";
+        });
+
+        document.getElementById("searchInput").addEventListener("input", () => renderTable(currentResults));
+        document.getElementById("riskFilter").addEventListener("change", () => renderTable(currentResults));
+
+        window.onload = function () {
+            initChart();
+        };
+    </script>
 </body>
+
 </html>

@@ -22,7 +22,7 @@ pip install -r requirements.txt
 
 REM Set environment variables (replace with your actual keys)
 set VT_API_KEY=88f9247c42b4f29d3997429c1ef5c7817e8068becfcb4e171855e0150da49b04
-set ABUSE_API_KEY=794d7459b26d13fcc134a2d1a0f5ce9d27d4a34b2b95b78257b1589e31cf6249accc59bfe3128ebf
+set ABUSE_API_KEY=0270e4ecd73216ecf81f5c974b2bec2efcbf2ef83310af4309a3985b73aaf0809830b8c3ebb3a80c
 
 echo Setup complete!
 echo To run the app, use: python app.py
