@@ -76,8 +76,207 @@ body {
 }
 
 /* ===================== */
-/* BUTTONS */
+/* DASHBOARD GRID */
 /* ===================== */
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 24px;
+    margin-bottom: 30px;
+}
+
+/* Visualization Panels */
+.viz-panel {
+    background: rgba(17, 17, 21, 0.4);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+}
+
+/* 3D Surface Panel (Left) */
+.topo-panel {
+    min-height: 480px;
+}
+
+.chart-container-topo {
+    flex: 1;
+    width: 100%;
+}
+
+/* Embedded Indicators (Small Overlay) */
+.embedded-stats {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: rgba(17, 17, 21, 0.7);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 12px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 20px;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.donut-container-small {
+    width: 70px;
+    height: 70px;
+}
+
+.details-legend-small {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.detail-item-small {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.marker-small {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    box-shadow: 0 0 5px currentColor;
+}
+
+.chart-container-topo {
+    flex: 1;
+    width: 100%;
+}
+
+/* Status Cards (Right Panel) */
+.stats-column {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.stat-card {
+    background: rgba(17, 17, 21, 0.4);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border-color);
+    padding: 20px;
+    border-left: 3px solid var(--border-color);
+}
+
+/* ===================== */
+/* INVESTIGATION ICONS & TOGGLES */
+/* ===================== */
+
+.intel-arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    background: rgba(0, 212, 255, 0.1);
+    color: var(--neon-blue);
+    border: 1px solid rgba(0, 212, 255, 0.2);
+    border-radius: 4px;
+    margin-left: 8px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.intel-arrow:hover,
+.intel-arrow.active {
+    background: var(--neon-blue);
+    color: #000;
+    box-shadow: 0 0 10px var(--neon-blue);
+}
+
+.intel-arrow.active {
+    transform: rotate(90deg);
+}
+
+/* ===================== */
+/* EXPANDABLE DETAILS ROW */
+/* ===================== */
+
+.details-row {
+    display: none;
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.details-row.active {
+    display: table-row;
+}
+
+.details-content {
+    padding: 20px;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.investigation-panel {
+    background: rgba(17, 17, 21, 0.6);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border-color);
+    border-left: 3px solid var(--neon-blue);
+    padding: 20px;
+    border-radius: 0 4px 4px 0;
+}
+
+.panel-header {
+    font-size: 12px;
+    text-transform: uppercase;
+    color: var(--neon-blue);
+    margin-bottom: 15px;
+    letter-spacing: 1px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.history-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.history-item {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 12px;
+    border-radius: 4px;
+}
+
+.history-label {
+    color: var(--text-muted);
+    font-size: 10px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+.history-value {
+    color: var(--text-primary);
+    font-size: 13px;
+    font-family: 'JetBrains Mono', monospace;
+}
 
 .top-controls {
     display: flex;
@@ -387,6 +586,19 @@ tbody tr:hover {
 
 .row-clean td:first-child {
     border-left: 2px solid var(--neon-green);
+}
+
+/* Comment and Group Braces */
+.comment-row td {
+    border-bottom: none !important;
+}
+
+.group-brace-row td {
+    padding: 2px 20px !important;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16px;
+    font-weight: bold;
+    border-bottom: none !important;
 }
 
 /* Badges */

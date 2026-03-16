@@ -1,0 +1,10 @@
+﻿f0d6e58 Update requirements
+9b202ef Merge branch 'main' of https://github.com/Agentalle/Ip-investigate-automation-tool
+c28298b update dhashboard
+2b35439 Add python-dotenv and gunicorn to requirements
+de551bc Update ip-scan.py for real-time progress display and result streaming
+40a2f39 Fix error handling for file operations and CSV reading in ip-scan.py
+4e5064d Initialize README with project details and features
+c3e414f Fix gitignore setup
+696b5eb Merge branch 'main' of https://github.com/Agentalle/Ip-investigate-automation-tool MIT License
+a484b3a Initial commit
